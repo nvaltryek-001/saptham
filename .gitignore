@@ -1,0 +1,16 @@
+node_modules
+dist
+.env
+.env.local
+.env.*
+!.env.example
+test-results
+playwright-report
+.vercel
+
+node_modules/
+dist/
+playwright-report/
+test-results/
+main-before-text-repair-*.jsx
+demo-banner-backup-*/
