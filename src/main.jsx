@@ -8,6 +8,7 @@ import {
   BookMarked, UserCheck
 } from "lucide-react";
 import "./style.css";
+import { loadIdentity, signOut, PREVIEW_ROLES, SSO_REQUIRED, BOOK_DEMO_URL } from "./sso.js";
 
 const initialStudents = [
   { id:"SPU001", name:"Aarav Shetty", year:"First PUC", stream:"Science", combination:"PCMB", section:"A", phone:"9876543210", parent:"Ramesh Shetty", attendance:96, status:"Active" },
@@ -202,9 +203,11 @@ function Status({value}) {
   return <span className={"status " + cls}>{value}</span>;
 }
 
-function App() {
+function App({identity}) {
   const [page,setPage] = useState("Dashboard");
-  const [role,setRole] = useState("Admin");
+  const [role,setRole] = useState(identity?.role || "Admin");
+  // IAM: a signed-in visitor is locked to their role; only Admin/Principal may preview others.
+  const canSwitch = !identity || PREVIEW_ROLES.includes(identity.role);
   const [mobileOpen,setMobileOpen] = useState(false);
   const [query,setQuery] = useState("");
   const [modal,setModal] = useState(false);
@@ -269,7 +272,7 @@ function App() {
   const canSeeFor = (r,n) => { const a=ACCESS[r]; return n==="Dashboard"||a==="all"||(a[0]==="-"?!a.slice(1).split(",").includes(n):a.split(",").includes(n)); };
   const canSee = (n) => canSeeFor(role,n);
   const readOnly = ["Student","Parent"].includes(role) && page!=="Grievances";
-  const switchRole = (r) => { setRole(r); if(!canSeeFor(r,page)) setPage("Dashboard"); setMobileOpen(false); };
+  const switchRole = (r) => { if(!canSwitch){ notify(`Access restricted: your role is ${identity.role}`); return false; } setRole(r); if(!canSeeFor(r,page)) setPage("Dashboard"); setMobileOpen(false); };
   const me = students[0]?.name;
   const filtered = useMemo(()=>{
     const f = data.filter(item=>{
@@ -440,9 +443,9 @@ function App() {
           </div>
           <div className="top-actions">
             <div className="global-search"><Search size={17}/><input placeholder="Search this page..." value={query} onChange={e=>setQuery(e.target.value)}/><kbd>⌘ K</kbd></div>
-            <select className="role-select" aria-label="Switch role" value={role} onChange={e=>switchRole(e.target.value)}>{ROLES.map(r=><option key={r}>{r}</option>)}</select>
+            {canSwitch ? <select className="role-select" aria-label="Switch role" value={role} onChange={e=>switchRole(e.target.value)}>{ROLES.map(r=><option key={r}>{r}</option>)}</select> : <span className="role-select role-locked" title="Role assigned by your access pass"><ShieldCheck size={14}/> {role}</span>}
             <button className="icon-button notification-button" title="Notifications" onClick={()=>notify("You are all caught up")}><Bell size={19}/><i/></button>
-            <div className="top-user"><div className="avatar">{role.slice(0,2).toUpperCase()}</div><div><b>{role}</b><span>Demo user</span></div></div>
+            <div className="top-user"><div className="avatar">{(identity?.name||role).slice(0,2).toUpperCase()}</div><div><b>{identity?.name||role}</b><span>{identity ? identity.email : "Demo user"}</span></div>{identity&&<button className="icon-button" title="Sign out" onClick={signOut}><LogOut size={17}/></button>}</div>
           </div>
         </header>
 
@@ -511,7 +514,7 @@ function App() {
           ) : page==="Role Portals" ? (
             <>
               <PageHeading icon={ShieldCheck} title="Role Portals" desc="Preview the application with different demo user roles."/>
-              <section className="panel role-panel"><h3>Choose a demo role</h3><p>Switch the role preview to explore role-specific access. This is demo-only access control.</p><div className="role-grid">{ROLES.map((r,i)=><button key={r} onClick={()=>{switchRole(r);notify(`${r} demo view selected`);}} className={`role-card ${role===r?"role-selected":""}`}><div className="role-avatar">{r[0]}</div><b>{r}</b><span>{["Full demo access","College overview","Classes and marks","Academic profile","Child progress","Fee operations"][i]}</span>{role===r&&<CheckCircle size={17}/>}</button>)}</div><div className="role-current"><ShieldCheck size={19}/> Current demo role: <b>{role}</b></div></section>
+              <section className="panel role-panel"><h3>Choose a demo role</h3><p>Switch the role preview to explore role-specific access. This is demo-only access control.</p><div className="role-grid">{ROLES.map((r,i)=><button key={r} onClick={()=>{if(switchRole(r)!==false) notify(`${r} demo view selected`);}} className={`role-card ${role===r?"role-selected":""}`}><div className="role-avatar">{r[0]}</div><b>{r}</b><span>{["Full demo access","College overview","Classes and marks","Academic profile","Child progress","Fee operations"][i]}</span>{role===r&&<CheckCircle size={17}/>}</button>)}</div><div className="role-current"><ShieldCheck size={19}/> Current demo role: <b>{role}</b></div></section>
             </>
           ) : page==="Settings" ? (
             <>
@@ -582,8 +585,26 @@ export default App;
 
 import { createRoot } from "react-dom/client";
 
+function AccessGate() {
+  return <div className="access-gate"><div className="access-card">
+    <img src="/saptham-logo.png" alt="Saptham" className="access-logo"/>
+    <span className="eyebrow">DEMO ACCESS</span>
+    <h1>Sign in to view the ERP demo</h1>
+    <p>Access to the Saptham PU College ERP is given after you book a demo with your Google account on sapthamai.com.</p>
+    <a className="primary-button" href={BOOK_DEMO_URL}>Book a Demo</a>
+  </div></div>;
+}
+
+function Root() {
+  const [state,setState] = React.useState({loading:true,identity:null});
+  React.useEffect(()=>{ loadIdentity(ROLES).then(identity=>setState({loading:false,identity})); },[]);
+  if (state.loading) return null;
+  if (!state.identity && SSO_REQUIRED) return <AccessGate/>;
+  return <App identity={state.identity}/>;
+}
+
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <Root />
   </React.StrictMode>
 );

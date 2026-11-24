@@ -184,3 +184,12 @@ th.sortable{cursor:pointer;user-select:none}
 .record-modal p{padding:0 22px;color:var(--muted)}
 .table-scroll{overflow-x:auto}
 @media(max-width:760px){.role-select{max-width:120px}}
+
+/* IAM: locked role badge + access gate */
+.role-locked{display:inline-flex;align-items:center;gap:6px;cursor:default;font-weight:600;color:#073B78;background:#eef4fb}
+.access-gate{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#f2f6ff,#fff)}
+.access-card{max-width:440px;width:100%;background:#fff;border:1px solid var(--line,#e3e8ef);border-radius:16px;padding:36px 32px;text-align:center;box-shadow:0 8px 24px -8px rgba(11,27,58,.12);display:flex;flex-direction:column;align-items:center;gap:12px}
+.access-logo{height:48px;width:auto;margin-bottom:6px}
+.access-card h1{font-size:22px;margin:0;color:#0b1b3a}
+.access-card p{font-size:14px;line-height:1.6;color:#5b6475;margin:0 0 8px}
+.access-card .primary-button{text-decoration:none}
